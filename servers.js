@@ -4,6 +4,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const gameRoutes = require('./routes/game');
 const rankingRoutes = require('./routes/ranking');
+const profileRoutes = require('./routes/profile');
 
 const app = express();
 const port = 3000;
@@ -19,6 +20,9 @@ app.use('/api/game', gameRoutes);
 
 //랭킹 라우트
 app.use('/api/ranking', rankingRoutes);
+
+//프로필 라우트
+app.use('api/profile', profileRoutes);
 
 // 서버 시작
 app.listen(port, () => {

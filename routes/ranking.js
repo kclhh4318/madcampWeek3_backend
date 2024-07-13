@@ -1,9 +1,8 @@
-// routes/ranking.js
-
 const express = require('express');
 const mysql = require('mysql2/promise');
 const router = express.Router();
 
+//MySQL 연걸 설정
 const pool = require('../config/database');
 
 // 랭킹 조회 API
@@ -19,7 +18,7 @@ router.get('/top', async (req, res) => {
       JOIN 
         Users u ON gs.user_id = u.user_id
       WHERE 
-        gs.is_active = false  -- 완료된 게임만 선택
+        gs.completed_at IS NOT NULL  -- 완료된 게임만 선택
       ORDER BY 
         gs.end_balance DESC
       LIMIT 100  -- 상위 100개 결과만 반환

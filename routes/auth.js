@@ -1,12 +1,13 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
+
+//MySQL 연결 설정
+const pool = require('../config/database');
 
 const router = express.Router();
 
-// 환경 변수로 관리하는 것이 좋지만, 예시를 위해 여기에 직접 작성합니다.
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 
@@ -25,7 +26,7 @@ router.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
     
         // 새 사용자 등록
-        await pool.query('INSERT INTO Users (username, password) VALUES (?, ?)', [username, password]);
+        await pool.query('INSERT INTO Users (username, password) VALUES (?, ?)', [username, hashedPassword]);
         console.log('User registered successfully:', { username });
     
         res.status(201).json({ message: '회원가입이 완료되었습니다.' });
@@ -63,7 +64,7 @@ router.post('/login', async (req, res) => {
         // 데이터베이스에 Refresh Token 저장
         await pool.query('UPDATE Users SET refresh_token = ? WHERE user_id = ?', [refreshToken, user.user_id]);
     
-        res.json({ message: '로그인 성공', accessToken, refreshToken });
+        res.json({ message: user.user_id, accessToken, refreshToken }); //원래 여기서 
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: '서버 오류가 발생했습니다.' });

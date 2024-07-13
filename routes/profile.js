@@ -1,19 +1,9 @@
-// routes/profile.js
-
 const express = require('express');
 const mysql = require('mysql2/promise');
 const router = express.Router();
 
 // MySQL 연결 설정
-const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '381412',
-  database: 'madcamp3',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+const pool = require('../config/database');
 
 // 사용자 프로필 및 게임 히스토리 조회 API
 router.get('/:userId', async (req, res) => {
@@ -41,7 +31,7 @@ router.get('/:userId', async (req, res) => {
         created_at,
         completed_at
       FROM GameSessions
-      WHERE user_id = ? AND is_active = false
+      WHERE user_id = ? AND completed_at IS NOT NULL
       ORDER BY completed_at DESC
       LIMIT 10
     `, [userId]);
@@ -50,7 +40,7 @@ router.get('/:userId', async (req, res) => {
     const [maxMoney] = await pool.query(`
       SELECT MAX(end_balance) AS max_money
       FROM GameSessions
-      WHERE user_id = ? AND is_active = false
+      WHERE user_id = ? AND completed_at IS NOT NULL
     `, [userId]);
 
     res.json({

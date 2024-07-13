@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-const ACCESS_TOKEN_SECRET = 'your_access_token_secret'; // 실제 프로덕션에서는 환경 변수로 관리해야 합니다.
+const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET; // 실제 프로덕션에서는 환경 변수로 관리해야 합니다.
 
 const authMiddleware = (req, res, next) => {
   const authHeader = req.header('Authorization');
