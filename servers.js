@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors'); // CORS 모듈 불러오기
+require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const gameRoutes = require('./routes/game');
 const rankingRoutes = require('./routes/ranking');

@@ -4,16 +4,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const router = express.Router();
 
-// MySQL 연결 설정 (실제 환경에서는 별도의 설정 파일로 분리하는 것이 좋습니다)
-const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '381412',
-  database: 'madcamp3',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+const pool = require('../config/database');
 
 // 랭킹 조회 API
 router.get('/top', async (req, res) => {

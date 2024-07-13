@@ -11,7 +11,7 @@ router.post('/start-game', async (req, res) => {
     
     // 1. 새 게임 세션 생성
     const [result] = await pool.query(
-      'INSERT INTO GameSessions (user_id, start_balance, current_balance) VALUES (?, 10000, 10000)',
+      'INSERT INTO GameSessions (user_id, start_balance, current_balance) VALUES (?, 100000000, 100000000)',
       [userId]
     );
     const sessionId = result.insertId;
@@ -51,7 +51,7 @@ router.post('/start-game', async (req, res) => {
 router.get('/game-state/:sessionId', async (req, res) => {
   // 게임 상태 조회 로직
   try {
-    //세
+    //클라이언트와 맞춰야 하는 정보
     const { sessionId } = req.params;
     
     // 현재 게임 세션 정보 조회
@@ -204,6 +204,39 @@ router.post('/end-turn/:sessionId', async (req, res) => {
         console.error(error);
         res.status(500).json({ message: '서버 오류가 발생했습니다.' });
       }
+});
+
+router.get('/stock-changes/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    // 현재 세션 정보 조회
+    const [session] = await pool.query('SELECT current_year FROM GameSessions WHERE session_id = ?', [sessionId]);
+    const currentYear = session[0].current_year;
+    const previousYear = currentYear - 1;
+
+    // 현재 년도와 이전 년도의 주가 정보 조회
+    const [stockChanges] = await pool.query(`
+      SELECT 
+        c.company_id,
+        c.name AS company_name,
+        prev.price AS previous_price,
+        curr.price AS current_price,
+        ((curr.price - prev.price) / prev.price * 100) AS change_percentage
+      FROM 
+        SessionCompanies sc
+        JOIN Companies c ON sc.company_id = c.company_id
+        JOIN StockPrices prev ON c.company_id = prev.company_id AND prev.year = ?
+        JOIN StockPrices curr ON c.company_id = curr.company_id AND curr.year = ?
+      WHERE 
+        sc.session_id = ?
+    `, [previousYear, currentYear, sessionId]);
+
+    res.json(stockChanges);
+  } catch (error) {
+    console.error('주가 변화 조회 중 오류 발생:', error);
+    res.status(500).json({ message: '서버 오류가 발생했습니다.' });
+  }
 });
 
 module.exports = router;
