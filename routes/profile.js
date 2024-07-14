@@ -5,14 +5,14 @@ const router = express.Router();
 // MySQL 연결 설정
 const pool = require('../config/database');
 
-// 사용자 프로필 및 게임 히스토리 조회 API
+// 사용자 프로필 및 게임 히스토리 조회 라우트
 router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
     // 사용자 정보 조회
     const [userInfo] = await pool.query(`
-      SELECT username, best_profit_rate, total_games
+      SELECT username, best_profit_rate, total_games, cumulative_profit_rate
       FROM Users
       WHERE user_id = ?
     `, [userId]);
@@ -26,8 +26,8 @@ router.get('/:userId', async (req, res) => {
       SELECT 
         session_id,
         start_balance,
-        end_balance,
-        (end_balance - start_balance) / start_balance * 100 AS profit_rate,
+        current_balance AS end_balance,
+        (current_balance - start_balance) / start_balance * 100 AS profit_rate,
         created_at,
         completed_at
       FROM GameSessions
@@ -38,7 +38,7 @@ router.get('/:userId', async (req, res) => {
 
     // 최고 금액 조회
     const [maxMoney] = await pool.query(`
-      SELECT MAX(end_balance) AS max_money
+      SELECT MAX(current_balance) AS max_money
       FROM GameSessions
       WHERE user_id = ? AND completed_at IS NOT NULL
     `, [userId]);
