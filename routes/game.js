@@ -124,30 +124,56 @@ router.post('/trade', async (req, res) => {
   }
 });
 
-// 뉴스 조회 라우트
-router.get('/news/:sessionId/:companyId/:type', async (req, res) => {
+// 뉴스 열람 라우트
+router.get('/news/:sessionId/:companyId/:isPremium', async (req, res) => {
   try {
-    const { sessionId, companyId, type } = req.params;
+    const { sessionId, companyId, isPremium } = req.params;
+    const isPremiumBool = isPremium === '1';
+    console.log('Requesting news:', { sessionId, companyId, isPremium: isPremiumBool });
 
-    // 세션 정보 및 사용자 포인트 조회
-    const [[session], [user]] = await Promise.all([
-      pool.query('SELECT current_year FROM GameSessions WHERE session_id = ?', [sessionId]),
-      pool.query('SELECT points FROM Users WHERE user_id = (SELECT user_id FROM GameSessions WHERE session_id = ?)', [sessionId])
-    ]);
+    // 세션 정보 조회
+    const [session] = await pool.query('SELECT current_balance, current_year FROM GameSessions WHERE session_id = ?', [sessionId]);
+    console.log('Session info:', session[0]);
 
-    const pointCost = type === 'general' ? 100 : 1000;
-
-    if (user[0].points < pointCost) {
-      return res.status(400).json({ message: '포인트가 부족합니다.' });
+    if (session.length === 0) {
+      return res.status(404).json({ message: '세션을 찾을 수 없습니다.' });
     }
 
-    // 뉴스 조회 및 포인트 차감
-    const [news] = await pool.query('SELECT * FROM News WHERE company_id = ? AND year = ? AND type = ?', [companyId, session[0].current_year, type]);
-    await pool.query('UPDATE Users SET points = points - ? WHERE user_id = (SELECT user_id FROM GameSessions WHERE session_id = ?)', [pointCost, sessionId]);
+    const newsCost = isPremiumBool ? 1000 : 100;
 
-    res.json({ news: news[0], remainingPoints: user[0].points - pointCost });
+    if (session[0].current_balance < newsCost) {
+      return res.status(400).json({ message: '잔액이 부족합니다.' });
+    }
+
+    // 뉴스 조회
+    let newsQuery = 'SELECT company_id, year, headline, content, isPremium FROM News WHERE company_id = ? AND year = ?';
+    const [news] = await pool.query(newsQuery, [companyId, session[0].current_year]);
+    console.log('News query result:', news);
+
+    if (news.length === 0) {
+      return res.status(404).json({ message: '해당 뉴스를 찾을 수 없습니다.' });
+    }
+
+    // 잔액 차감
+    await pool.query('UPDATE GameSessions SET current_balance = current_balance - ? WHERE session_id = ?', [newsCost, sessionId]);
+
+    // isPremium에 따라 반환할 데이터 결정
+    let responseNews = {
+      company_id: news[0].company_id,
+      year: news[0].year,
+      headline: news[0].headline
+    };
+
+    if (isPremiumBool) {
+      responseNews.content = news[0].content;
+    }
+
+    res.json({ 
+      news: responseNews, 
+      remainingBalance: session[0].current_balance - newsCost 
+    });
   } catch (error) {
-    console.error(error);
+    console.error('News route error:', error);
     res.status(500).json({ message: '서버 오류가 발생했습니다.' });
   }
 });
@@ -160,10 +186,6 @@ router.post('/end-turn/:sessionId', async (req, res) => {
     // 현재 세션 정보 조회
     const [session] = await pool.query('SELECT * FROM GameSessions WHERE session_id = ?', [sessionId]);
     const nextYear = session[0].current_year + 1;
-
-    if (nextYear > 2024) {
-      return res.status(400).json({ message: '게임이 종료되었습니다.' });
-    }
 
     // 투자 내역 조회
     const [investments] = await pool.query('SELECT * FROM Investments WHERE session_id = ?', [sessionId]);
@@ -178,17 +200,35 @@ router.post('/end-turn/:sessionId', async (req, res) => {
       totalValue += inv.amount * newPrice;
     }
 
-    // 세션 업데이트
-    await pool.query('UPDATE GameSessions SET current_year = ?, current_balance = ? WHERE session_id = ?', [nextYear, totalValue, sessionId]);
+    if (nextYear > 2024) {
+      // 게임 종료 로직
+      await pool.query('UPDATE GameSessions SET current_year = ?, current_balance = ?, completed_at = NOW() WHERE session_id = ?', [nextYear, totalValue, sessionId]);
+      
+      // 사용자 정보 업데이트
+      const profit_rate = (totalValue - session[0].start_balance) / session[0].start_balance * 100;
+      await pool.query(`
+        UPDATE Users 
+        SET 
+          total_games = total_games + 1,
+          best_profit_rate = GREATEST(IFNULL(best_profit_rate, 0), ?),
+          cumulative_profit_rate = (IFNULL(cumulative_profit_rate, 0) * total_games + ?) / (total_games + 1)
+        WHERE user_id = ?
+      `, [profit_rate, profit_rate, session[0].user_id]);
 
-    // 투자 내역 초기화
-    await pool.query('DELETE FROM Investments WHERE session_id = ?', [sessionId]);
+      res.json({ message: '게임이 종료되었습니다.', finalBalance: totalValue });
+    } else {
+      // 일반적인 턴 종료 로직
+      await pool.query('UPDATE GameSessions SET current_year = ?, current_balance = ? WHERE session_id = ?', [nextYear, totalValue, sessionId]);
 
-    res.json({
-      message: '턴이 종료되었습니다.',
-      nextYear,
-      newBalance: totalValue
-    });
+      // 투자 내역 초기화
+      await pool.query('DELETE FROM Investments WHERE session_id = ?', [sessionId]);
+
+      res.json({
+        message: '턴이 종료되었습니다.',
+        nextYear,
+        newBalance: totalValue
+      });
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: '서버 오류가 발생했습니다.' });

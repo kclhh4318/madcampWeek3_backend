@@ -22,7 +22,7 @@ app.use('/api/game', gameRoutes);
 app.use('/api/ranking', rankingRoutes);
 
 //프로필 라우트
-app.use('api/profile', profileRoutes);
+app.use('/api/profile', profileRoutes);
 
 // 서버 시작
 app.listen(port, () => {
