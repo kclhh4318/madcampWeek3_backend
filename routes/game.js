@@ -296,7 +296,7 @@ router.post('/end-turn/:sessionId', async (req, res) => {
       }
     }
 
-    if (nextYear > 2023) {
+    if (nextYear > 2022) {
       // 게임 종료 로직
       await pool.query('UPDATE GameSessions SET current_year = ?, current_balance = ?, completed_at = NOW() WHERE session_id = ?', [nextYear, totalValue, sessionId]);
       
