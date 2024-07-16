@@ -12,6 +12,8 @@ const port = 3000;
 app.use(cors()); // CORS 미들웨어 추가
 app.use(express.json()); // JSON 파싱 미들웨어 추가
 
+app.options('*', cors()); // 모든 옵션 요청에 대해 CORS 허용
+
 // 로그인/회원가입 라우트
 app.use('/api/auth', authRoutes);
 

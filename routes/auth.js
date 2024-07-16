@@ -64,7 +64,7 @@ router.post('/login', async (req, res) => {
         // 데이터베이스에 Refresh Token 저장
         await pool.query('UPDATE Users SET refresh_token = ? WHERE user_id = ?', [refreshToken, user.user_id]);
     
-        res.json({ message: user.user_id, accessToken, refreshToken }); //원래 여기서 
+        res.json({ userId: user.user_id, accessToken, refreshToken }); //원래 여기서 
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: '서버 오류가 발생했습니다.' });
@@ -79,25 +79,22 @@ router.post('/refresh-token', async (req, res) => {
             return res.status(400).json({ message: 'Refresh Token이 제공되지 않았습니다.' });
         }
 
-        // Refresh Token 검증
         const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
 
-        // 데이터베이스에서 사용자 확인
         const [users] = await pool.query('SELECT * FROM Users WHERE user_id = ? AND refresh_token = ?', [decoded.userId, refreshToken]);
-        
+
         if (users.length === 0) {
             return res.status(401).json({ message: '유효하지 않은 Refresh Token입니다.' });
         }
 
         const user = users[0];
 
-        // 새 Access Token 생성
         const newAccessToken = jwt.sign({ userId: user.user_id }, ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
 
         res.json({ accessToken: newAccessToken });
     } catch (error) {
         console.error(error);
-        res.status(401).json({ message: 'Refresh Token이 만료되었습니다. 다시 로그인해주세요.' });
+        res.status(401).json({ message: 'Refresh Token이 만료되었거나 유효하지 않습니다. 다시 로그인해주세요.' });
     }
 });
 
