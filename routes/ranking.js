@@ -48,7 +48,24 @@ router.get('/top-cumulative-profit', async (req, res) => {
       LIMIT 100
     `);
 
-    res.json(rows);
+    // 수익률을 백분율로 표시하고 예외 처리
+    const formattedRows = rows.map(row => {
+      let formattedRate = '0.00%';
+      try {
+        const rate = parseFloat(row.cumulative_profit_rate);
+        if (!isNaN(rate)) {
+          formattedRate = rate.toFixed(2) + '%';
+        }
+      } catch (error) {
+        console.error('Error formatting cumulative_profit_rate:', error);
+      }
+      return {
+        ...row,
+        cumulative_profit_rate: formattedRate
+      };
+    });
+
+    res.json(formattedRows);
   } catch (error) {
     console.error('랭킹 조회 중 오류 발생:', error);
     res.status(500).json({ message: '서버 오류가 발생했습니다.' });
