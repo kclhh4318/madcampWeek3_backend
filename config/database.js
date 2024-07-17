@@ -10,4 +10,14 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+// 연결 테스트
+pool.getConnection()
+  .then(connection => {
+    console.log('Database connected successfully');
+    connection.release();
+  })
+  .catch(err => {
+    console.error('Error connecting to the database:', err);
+  });
+
 module.exports = pool;

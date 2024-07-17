@@ -1,5 +1,5 @@
 const express = require('express');
-const cors = require('cors'); // CORS 모듈 불러오기
+const cors = require('cors');
 require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const gameRoutes = require('./routes/game');
@@ -7,26 +7,28 @@ const rankingRoutes = require('./routes/ranking');
 const profileRoutes = require('./routes/profile');
 
 const app = express();
-const port = 3000;
+const port = 80; // HTTP 기본 포트인 80으로 변경
 
-app.use(cors()); // CORS 미들웨어 추가
-app.use(express.json()); // JSON 파싱 미들웨어 추가
+app.use(cors({
+  origin: ['http://localhost:3001', 'https://kcloudvpn.kaist.ac.kr'],
+  credentials: true
+}));
+app.use(express.json());
 
-app.options('*', cors()); // 모든 옵션 요청에 대해 CORS 허용
+app.options('*', cors());
 
-// 로그인/회원가입 라우트
 app.use('/api/auth', authRoutes);
-
-// 게임 기능 라우트
 app.use('/api/game', gameRoutes);
-
-//랭킹 라우트
 app.use('/api/ranking', rankingRoutes);
-
-//프로필 라우트
 app.use('/api/profile', profileRoutes);
 
-// 서버 시작
-app.listen(port, () => {
+// 에러 핸들링 미들웨어
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
+
+// HTTP 서버 시작
+app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
 });

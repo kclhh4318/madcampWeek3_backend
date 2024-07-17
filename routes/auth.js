@@ -64,7 +64,7 @@ router.post('/login', async (req, res) => {
         // 데이터베이스에 Refresh Token 저장
         await pool.query('UPDATE Users SET refresh_token = ? WHERE user_id = ?', [refreshToken, user.user_id]);
     
-        res.json({ userId: user.user_id, accessToken, refreshToken }); //원래 여기서 
+        res.json({ userId: user.user_id, username, accessToken, refreshToken }); //원래 여기서 
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: '서버 오류가 발생했습니다.' });
